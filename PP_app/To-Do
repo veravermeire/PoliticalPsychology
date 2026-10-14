@@ -1,0 +1,18 @@
+To-Do list:
+
+- Change title (opinion dynamics --> political psychology?)
+- Make script more elegant / efficient and THEN make it tidyverse approved with a lot of high-quality comments
+- Fix spacing of Current state plot: 
+    - no large white spaces between title-plot, or title-tab option
+    - make it so the size matches the screen/window size?
+- Alter layout or placing of Metric-section.
+    - Perhaps below the contents of a tabs (e.g., below plot in current state), or have it be a separate tab? 
+    - Add histogram
+    - Add other relevant results?
+- Change the placing and formatting of the "step / paused / active seed" section (e.g., right below the current state plot?)
+- Improve readability of controls section:
+    - Suggestion: less stripes / numbers at slide bars to lessen visual clutter?
+    - Change name of "delay between steps (miliseconds)" to speed of graph or something more intuitive?
+- Add a hover function where you can see an individual's opinion number or other stats?
+-Improve prettiness of shiny app :)
+
