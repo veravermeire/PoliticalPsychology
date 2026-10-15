@@ -1,23 +1,12 @@
 To-Do list:
 
-- Alter variables dependent on literature study :)
-- Change title (opinion dynamics --> political psychology?)
-- Make script more elegant / efficient 
-- Improve prettiness of shiny app :)
-- Optional: Update rules tab and make them more complete (or delete and put everything in README)
+- Get real data --> drop-down option within model settings: simulation vs real data
+    - Mattias finds it
+    - Vera integrates it
+- Beautify it (Mattias)
+- Statistical analysis (Ioana)
+- README integration of theory and sources (Ioana + Mattias)
+    - depending on this, include/exclude the rules tab
+- Final code version: let AI add informative comments and understandable (Vera, someone else?)
+- Make sure we meet the assignment's requirements (someone look into this: let Vera know what to do lol)
 
-Done:
-- Added comments to App.r from lines 1-654.
-- Fix spacing of Current state plot: 
-    - no large white spaces between title-plot, or title-tab option
-    - make it so the size matches the screen/window size?
-- Alter layout or placing of Metric-section.
-    - Perhaps below the contents of a tabs (e.g., below plot in current state), or have it be a separate tab? 
-    - Add histogram
-    - Add other relevant results?
-- Change the placing and formatting of the "step / paused / active seed" section (e.g., right below the current state plot?)
-- Improve readability of controls section:
-    - Suggestion: less stripes / numbers at slide bars to lessen visual clutter?
-    - Change name of "delay between steps (miliseconds)" to speed of graph or something more intuitive?
-- Add a hover function where you can see an individual's opinion number or other stats?
-- Add in rules or somewhere else that if after 3 consecutive runs all changes are smaller than 0.001, that the current Run stops (instead of continuing until the maximum amount of steps)
