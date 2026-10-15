@@ -1,9 +1,10 @@
 To-Do list:
 
+- Alter variables dependent on literature study :)
 - Change title (opinion dynamics --> political psychology?)
 - Make script more elegant / efficient 
 - Improve prettiness of shiny app :)
-- Optional: Update rules tab and make them more complete.
+- Optional: Update rules tab and make them more complete (or delete and put everything in README)
 
 Done:
 - Added comments to App.r from lines 1-654.
