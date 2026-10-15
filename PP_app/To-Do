@@ -1,7 +1,12 @@
 To-Do list:
 
 - Change title (opinion dynamics --> political psychology?)
-- Make script more elegant / efficient and THEN make it tidyverse approved with a lot of high-quality comments
+- Make script more elegant / efficient 
+- Improve prettiness of shiny app :)
+- Optional: Update rules tab and make them more complete.
+
+Done:
+- Added comments to App.r from lines 1-654.
 - Fix spacing of Current state plot: 
     - no large white spaces between title-plot, or title-tab option
     - make it so the size matches the screen/window size?
@@ -14,5 +19,4 @@ To-Do list:
     - Suggestion: less stripes / numbers at slide bars to lessen visual clutter?
     - Change name of "delay between steps (miliseconds)" to speed of graph or something more intuitive?
 - Add a hover function where you can see an individual's opinion number or other stats?
--Improve prettiness of shiny app :)
-
+- Add in rules or somewhere else that if after 3 consecutive runs all changes are smaller than 0.001, that the current Run stops (instead of continuing until the maximum amount of steps)
