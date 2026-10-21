@@ -1,8 +1,11 @@
 # Political Psychology: Simulating Opinion Dynamics
 ## Why study political polarization?
-Political disagreement is a normal part of democracy, but persistent divisions can make communication and cooperation across political groups more difficult. Research on affective polarization highlights how political identity, perceived intergroup threat, and media environments may contribute to negative attitudes toward political opponents (Kogel & Zinnatullin, 2026; Renström et al., 2021). Other research suggests that openness to opposing views and the strength of partisan identification matter for cross-group engagement (Porter & Schumann, 2018; Thomsen & Thomsen, 2023).
+Political disagreement is a normal part of democracy, but persistent divisions can make communication and cooperation across political groups more difficult. Research on affective polarization, which refers to negative attitudes toward political outgroups, highlights how political identity, perceived intergroup threat, and media environments may contribute to negative attitudes toward political opponents (Kogel & Zinnatullin, 2026; Renström et al., 2021). Other research suggests that openness to opposing views and the strength of partisan identification matter for cross-group engagement (Porter & Schumann, 2018; Thomsen & Thomsen, 2023).
 
-This project explores a related question: How can individual opinions and social interactions produce broader patterns of political division or convergence? We use computational simulations to make these processes visible and examine how outcomes depend on the assumptions built into the model.
+While affective polarization concerns attitudes toward political outgroups, opinion-based polarization refers to differences in political opinions between groups. In our simulation, **depolarization** occurs when the average political opinions of two groups move closer together over time. Conversely, **polarization increases** when the distance between their average opinions grows.
+
+Building on these perspectives, this project explores the following question: **How can individual opinions and social interactions produce broader patterns of political division or convergence?** We use computational simulations to make these processes visible and examine how outcomes depend on the assumptions built into the model.
+
 ## Project components
 ### 1. Main simulation: political identity, perceived polarization, and congenial media
 Our R Shiny app models people as agents connected through a social network, with political opinions represented between −1 and +1. The existing app illustrates how network connections, openness to other opinions, and social influence shape opinion change.
