@@ -1,5 +1,5 @@
 # PoliticalPsychology: Simulating Opinion Dynamics
-##Why study political polarization?
+## Why study political polarization?
 
 Political disagreements are a normal part of democracy. However, when political divisions become entrenched, people may become less willing to engage with opposing viewpoints, making constructive discussion and cooperation more difficult. Research on affective polarization—negative feelings toward political outgroups—highlights the roles of social identity, perceived threat, and information environments (Kogel & Zinnatullin, 2026; Renström et al., 2021). Evidence also suggests that contact across political groups may be less effective among people with stronger partisan identities (Thomsen & Thomsen, 2023).
 
