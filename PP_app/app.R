@@ -1,6 +1,11 @@
 # load relevant libraries and sources
 library(shiny)
 source("simulation.R", local = TRUE)
+source("anes_network.R", local = TRUE)
+
+# Load the ANES respondents (the csv in data/). If the file is missing the
+# app still works in simulation mode and shows a message in ANES mode.
+anes_people <- tryCatch(load_anes_people(), error = function(e) NULL)
 
 # create colour palette for opinions
 opinion_palette <- grDevices::colorRampPalette(c("#2166AC", "#F7F7F7", "#B2182B"))(201)
@@ -17,7 +22,7 @@ ui <- fluidPage(titlePanel("Opinion dynamics"), tags$head(
     HTML(
       "
 
-    # Styling of statistics panel
+    /* Styling of statistics panel */
       .statistics-panel {
         background: #ffffff;
         border: 1px solid #e3e7eb;
@@ -26,45 +31,45 @@ ui <- fluidPage(titlePanel("Opinion dynamics"), tags$head(
         margin-top: 12px;
       }
 
-    # Styling of statistics heading
+    /* Styling of statistics heading */
       .statistics-panel .statistics-heading {
         font-size: 16px;
         font-weight: 600;
         margin: 0 0 14px 0;
       }
 
-    # Styling of statistics metrics
+    /* Styling of statistics metrics */
       .statistics-panel #metrics,
       .statistics-panel #metrics table {
         width: 100% !important;
       }
 
-    # Styling of metrics table - remove bottom margin
+    /* Styling of metrics table - remove bottom margin */
       .statistics-panel #metrics table {
         margin-bottom: 0;
       }
 
-    # Styling of metrics - gives header
+    /* Styling of metrics - gives header */
       .statistics-panel #metrics th,
       .statistics-panel #metrics td {
         padding: 10px 12px;
         vertical-align: middle;
       }
 
-    # Right-aligns the cell, prevents multiple-line wrapping
+    /* Right-aligns the cell, prevents multiple-line wrapping */
       .statistics-panel #metrics th:last-child,
       .statistics-panel #metrics td:last-child {
         text-align: right;
         white-space: nowrap;
       }
 
-    # Create divider
+    /* Create divider */
       .statistics-panel .statistics-divider {
         border-top: 1px solid #e3e7eb;
         margin: 18px 0 10px 0;
       }
 
-    # Allocate proportion of network to statistics column within current_state
+    /* Allocate proportion of network to statistics column within current_state */
       @media (min-width: 768px) {
         #network-column {
           width: 62%;
@@ -137,6 +142,17 @@ sidebarLayout(
   sidebarPanel(
     width = 3,
     h4("Model settings"),
+
+    # Switch between the simulated population and real survey respondents
+    selectInput(
+      "data_source",
+      "Data source",
+      choices = c(
+        "Simulated opinions" = "sim",
+        "ANES 2024 respondents (real data)" = "anes"
+      ),
+      selected = "sim"
+    ),
     
     # Slider for n People
     sliderInput(
@@ -148,7 +164,9 @@ sidebarLayout(
       step = 10
     ),
     
-    # Drop-down menu for opinion spread, with default=two_groups
+    # Drop-down menu for opinion spread, with default=two_groups (simulation only)
+    conditionalPanel(
+      condition = "input.data_source == 'sim'",
     selectInput(
       "pattern",
       "Initial opinions",
@@ -158,7 +176,7 @@ sidebarLayout(
         "Two groups" = "two_groups"
       ),
       selected = "two_groups"
-    ),
+    )),
     
     # Slider for average connections
     sliderInput(
@@ -180,7 +198,9 @@ sidebarLayout(
       step = 0.25
     ),
     
-    # Slider for openness threshold
+    # Slider for openness threshold (simulation only)
+    conditionalPanel(
+      condition = "input.data_source == 'sim'",
     sliderInput(
       "openness",
       "Openness threshold",
@@ -188,7 +208,7 @@ sidebarLayout(
       max = 2,
       value = 0.4,
       step = 0.05
-    ),
+    )),
     
     # Slider for adjustment per step
     sliderInput(
@@ -200,6 +220,23 @@ sidebarLayout(
       step = 0.05
     ),
     
+    # Real-data controls
+    conditionalPanel(
+      condition = "input.data_source == 'anes'",
+      sliderInput(
+        "media_effect",
+        "Extra similarity preference from congenial media",
+        min = 0, max = 5, value = 1, step = 0.25
+      ),
+      sliderInput(
+        "openness_range",
+        "Openness: strong party identity (low end) to weak (high end)",
+        min = 0, max = 1, value = c(0.2, 0.6), step = 0.05
+      )
+    ),
+
+    numericInput("seed", "Random seed", value = 123, min = 0, step = 1),
+
     # Option for moving or fixed nodes in Network display
     actionButton("reset", "Reset / apply", class = "btn-primary"),
     tags$hr(),
@@ -209,7 +246,9 @@ sidebarLayout(
       choices = c("Move with opinions" = "moving", "Fixed" = "fixed"),
       selected = "moving",
       inline = TRUE
-    )
+    ),
+    tags$hr(),
+    downloadButton("download_history", "Download opinion history (CSV)", class = "btn-sm")
   ),
   
   # Main panel (tab)
@@ -328,11 +367,16 @@ sidebarLayout(
           "Standard deviation and opinion range measure spread; they are not complete measures of polarization. Stable opinions do not necessarily imply agreement."
         ),
         p(
-          "The app uses a fixed internal random seed of 123, so unchanged settings reproduce the same starting situation."
+          "The random seed in the sidebar (default 123) makes runs reproducible: unchanged settings reproduce the same starting situation."
         ),
         p(
           "Stepping back pauses playback, restores the previous opinions, and removes subsequent history. Stepping forward recomputes the next step with the same network and settings."
-        )
+        ),
+        h4("Real-data mode (ANES 2024)"),
+        p("Each person is a respondent from the 2024 American National Election Studies Time Series. Starting opinion is the liberal-conservative self-placement rescaled to -1..+1."),
+        p("Openness depends on how important the respondent says their party identity is: the more important, the lower the openness threshold (the range is set by the openness slider)."),
+        p("Ties are constructed, not observed: ANES has no information on who knows whom. The probability of a tie decreases with opinion distance, and the preference for similar opinions is stronger between two people who watch more TV news from their own side (Fox shows for Republicans and leaners, MSNBC shows for Democrats and leaners)."),
+        p("Pure independents are not included because they have no co-partisan media. Source: American National Election Studies, ANES 2024 Time Series Study (electionstudies.org).")
       )
     )
   )
@@ -404,7 +448,7 @@ server <- function(input, output, session) {
       plot_height <- 480
     
     left <- min(hover$coords_css$x + 14, max(8, plot_width - 230))
-    top <- min(hover$coords_css$y + 14, max(8, plot_height - 130))
+    top <- min(hover$coords_css$y + 14, max(8, plot_height - (if (is.null(s$people)) 130 else 230)))
     
     # Create tooltip container
     div(
@@ -451,7 +495,27 @@ server <- function(input, output, session) {
       tags$br(),
       
       # Fill Tooltip: n connections
-      paste("Connections:", selected$connections)
+      paste("Connections:", selected$connections),
+      
+      # Real-data mode: survey attributes of this respondent
+      if (!is.null(s$people)) {
+        pp <- s$people[selected$participant_id, ]
+        tagList(
+          tags$br(),
+          paste("Party side:", if (is.na(pp$side)) "independent" else
+            if (pp$side == "D") "Democrat/leaner" else "Republican/leaner"),
+          tags$br(),
+          paste("Party identity importance:", sprintf("%.2f", pp$identity)),
+          tags$br(),
+          paste("Congenial media (0-1):", sprintf("%.2f", pp$media)),
+          tags$br(),
+          paste("Openness:", sprintf("%.2f", s$settings$openness[selected$participant_id])),
+          tags$br(),
+          paste("Perceived party distance:",
+                if (is.na(pp$perceived_polarization)) "n/a" else
+                  sprintf("%.0f of 6", pp$perceived_polarization))
+        )
+      }
     )
   })
   
@@ -474,26 +538,57 @@ server <- function(input, output, session) {
   
   # Recalculate settings after changed referenced inputs
   requested_settings <- reactive({
-    req(input$n, input$pattern)
+    req(input$n, input$data_source, !is.na(input$seed))
     
-    # Collects input information
-    list(
+    # Settings shared by both modes
+    base <- list(
       n = input$n,
-      pattern = input$pattern,
       average_degree = min(input$average_degree, input$n - 1),
       homophily = input$homophily,
-      openness = input$openness,
       adjustment = input$adjustment,
       max_steps = 200,
-      seed = 123
+      seed = input$seed
     )
+    
+    if (identical(input$data_source, "anes")) {
+      c(base, list(
+        media_effect = input$media_effect,
+        open_min = input$openness_range[1],
+        open_max = input$openness_range[2]
+      ))
+    } else {
+      req(input$pattern)
+      c(base, list(pattern = input$pattern, openness = input$openness))
+    }
   })
+  
+  # Sensible starting values when switching data source
+  observeEvent(input$data_source, {
+    if (identical(input$data_source, "anes")) {
+      updateSliderInput(session, "average_degree", value = 4)
+      updateSliderInput(session, "homophily", value = 1)
+    } else {
+      updateSliderInput(session, "average_degree", value = 10)
+      updateSliderInput(session, "homophily", value = 0)
+    }
+  }, ignoreInit = TRUE)
   
   # Handle "Reset / apply" and startup runs
   observeEvent(input$reset, {
     running(FALSE)
     tryCatch({
-      new_state <- do.call(initialize_model, requested_settings())
+      settings <- requested_settings()
+      if (identical(input$data_source, "anes")) {
+        if (is.null(anes_people)) {
+          stop("ANES data file not found in the data/ folder. See the README.")
+        }
+        new_state <- do.call(initialize_anes_model,
+                             c(list(people = anes_people), settings))
+      } else {
+        new_state <- do.call(initialize_model, settings)
+      }
+      # remember which inputs produced this state (used for the status line)
+      new_state$applied_inputs <- c(list(source = input$data_source), settings)
       state(new_state)
     }, error = function(e) {
       showNotification(conditionMessage(e),
@@ -502,11 +597,37 @@ server <- function(input, output, session) {
     })
   }, ignoreNULL = FALSE)
   
+  # Status line: current mode, progress, and a hint if settings have changed
+  output$status <- renderText({
+    s <- state()
+    req(s)
+    mode <- if (identical(s$settings$source, "anes")) {
+      "ANES 2024 respondents"
+    } else {
+      "Simulated opinions"
+    }
+    current <- c(list(source = input$data_source), requested_settings())
+    changed <- !identical(s$applied_inputs, current)
+    paste0(
+      mode, " | ", length(s$opinions), " people | step ", s$step, " of ",
+      s$settings$max_steps,
+      if (changed) "\nSettings changed - click Reset / apply to use them." else ""
+    )
+  })
+  
+  # Download the opinion history of the current run
+  output$download_history <- downloadHandler(
+    filename = function() paste0("opinion_history_step", state()$step, ".csv"),
+    content = function(file) {
+      write.csv(history_data(state()), file, row.names = FALSE)
+    }
+  )
+  
   # Respond to the next-step button.
   observeEvent(input$step_once, {
     req(state())
     running(FALSE)
-    state(step_model(state()))
+    state(step_model_any(state()))
   })
   
   # Respond to the step-back button
@@ -612,7 +733,7 @@ server <- function(input, output, session) {
         running(FALSE)
       } else {
         if (s$step < s$settings$max_steps) {
-          s <- step_model(s)
+          s <- step_model_any(s)
           state(s)
         }
         
@@ -658,7 +779,7 @@ server <- function(input, output, session) {
     eligible <- s$adjacency &
       (abs(outer(s$opinions, s$opinions, "-")) <= s$settings$openness)
     
-    data.frame(
+    metrics_df <- data.frame(
       Metric = c(
         "Mean opinion",
         "Opinion standard deviation",
@@ -674,6 +795,13 @@ server <- function(input, output, session) {
         as.character(sum(rowSums(eligible) == 0))
       )
     )
+    if (!is.null(s$people)) {
+      metrics_df <- rbind(metrics_df, data.frame(
+        Metric = "Survey: mean perceived party distance (0-6)",
+        Value = sprintf("%.2f", mean(s$people$perceived_polarization, na.rm = TRUE))
+      ))
+    }
+    metrics_df
   }, striped = TRUE, rownames = FALSE, width = "100%")
   
   output$histogram <- renderPlot({
