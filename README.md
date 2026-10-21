@@ -1,27 +1,28 @@
-# PoliticalPsychology: Simulating Opinion Dynamics
+# Political Psychology: Simulating Opinion Dynamics
 ## Why study political polarization?
+Political disagreement is a normal part of democracy, but persistent divisions can make communication and cooperation across political groups more difficult. Research on affective polarization highlights how political identity, perceived intergroup threat, and media environments may contribute to negative attitudes toward political opponents (Kogel & Zinnatullin, 2026; Renström et al., 2021). Other research suggests that openness to opposing views and the strength of partisan identification matter for cross-group engagement (Porter & Schumann, 2018; Thomsen & Thomsen, 2023).
 
-Political disagreements are a normal part of democracy. However, when political divisions become entrenched, people may become less willing to engage with opposing viewpoints, making constructive discussion and cooperation more difficult. Research on affective polarization—negative feelings toward political outgroups—highlights the roles of social identity, perceived threat, and information environments (Kogel & Zinnatullin, 2026; Renström et al., 2021). Evidence also suggests that contact across political groups may be less effective among people with stronger partisan identities (Thomsen & Thomsen, 2023).
+This project explores a related question: How can individual opinions and social interactions produce broader patterns of political division or convergence? We use computational simulations to make these processes visible and examine how outcomes depend on the assumptions built into the model.
+## Project components
+### 1. Main simulation: political identity, perceived polarization, and congenial media
+Our R Shiny app models people as agents connected through a social network, with political opinions represented between −1 and +1. The existing app illustrates how network connections, openness to other opinions, and social influence shape opinion change.
 
-These findings raise a broader question: How do everyday social interactions shape the development or persistence of political differences? Our project uses a computational simulation to explore this question. Rather than predicting real elections or voters' behavior, it illustrates how simple rules of social influence can produce different patterns of opinion change across a network.
+The main simulation is being adapted to incorporate the same three psychological variables investigated in the statistical analysis: political identity strength, perceived polarization, and congenial media exposure. The goal is for the interactive simulation and the factorial analysis to examine the same theoretical mechanisms. Until that adaptation is complete, the current app uses its existing openness- and network-based rules.
+### 2. Separate ANES 2024 real-data mode
+The app also includes an exploratory mode based on respondents from the 2024 American National Election Studies (ANES). Instead of generating all starting opinions artificially, it uses respondents' reported liberal–conservative self-placement, rescaled from 1–7 to −1 to +1.
 
-## About the project
-We developed an agent-based opinion dynamics model in R, with an interactive Shiny application. Each agent represents a person with a political opinion between −1 and +1. Agents are connected through a social network, representing opportunities to influence one another.
+The ANES mode also uses reported party identity importance to set each agent's openness to differing views, and selected congenial TV news exposure to influence the probability of connecting with like-minded agents. Connections and subsequent opinion changes are still simulated, not observed in ANES. This is an empirically informed illustration, not a validation of the model.
+### 3. Statistical analysis of the main theoretical model
+The statistical analysis investigates the same three variables that the main interactive simulation is being adapted to include: political identity strength, perceived polarization, and congenial media exposure. Unlike the ANES mode, this is a controlled theoretical simulation experiment.
 
-At each simulation step, an agent considers the opinions of connected neighbors who fall within an adjustable openness threshold. The agent then moves partway toward those neighbors' average opinion. People with no eligible neighbors keep their current opinion. All opinions update simultaneously.
+We used a 2 × 2 × 2 factorial design, comparing low and high parameter settings across 30 random seeds, with 100 agents and 200 simulation steps. Analyses examined the change in distance between the two political groups' mean opinions, trajectories over time, and the number of steps required for outcomes to stabilize. We also conducted sensitivity checks using alternative stabilization thresholds and network density.
 
-The application lets users explore how outcomes depend on:
-- Starting opinions: a broad distribution, opinions concentrated near the center, or two opposing groups.
-- Network structure: the number of connections and the tendency to connect with like-minded people (homophily).
-- Openness to disagreement: how different a neighbor's opinion can be before influence stops.
-- Strength of influence: how far an agent moves toward eligible neighbors at each step.
-The interface visualizes the network, opinion distribution, and trajectories over time. Users can pause, advance or reverse steps, change settings, and export opinion histories.
-## Why use a simulation?
-A simulation makes it possible to change one social-influence rule at a time and observe how collective patterns emerge. For example, a network may contain many connections yet show little convergence if agents disregard neighbors with substantially different opinions. The model therefore offers a way to think about the relationship between individual openness, social connections, and group-level divisions.
+The main finding was an interaction between identity strength and congenial media exposure: stronger identity was associated with greater depolarization when congenial media exposure was low, but less depolarization when exposure was high. Perceived polarization had little effect on final opinion distance, although it was associated with slower early depolarization and stabilization.
 
-This approach is informed by research on polarization and openness to opposing views (Kogel & Zinnatullin, 2026; Porter & Schumann, 2018). Importantly, the model tracks opinion differences, not hostility toward political outgroups. Its rules are simplified assumptions, so its outputs should be interpreted as exploratory demonstrations rather than evidence of causal effects in real populations.
-## Running the app
-Open the PP_app folder in RStudio, install the shiny package if needed, and run app.R. The core simulation functions are in simulation.R.
+## How to run the project
+The interactive application is in PP_app/app.R, and its core model is in PP_app/simulation.R. Open the app in RStudio and select Run App. The main app is being updated to reflect the three variables used in the statistical analysis. The separate ANES mode uses PP_app/anes_network.R and requires the ANES 2024 Time Series CSV in the project's data/ folder. The analysis script contains the factorial simulation experiment and visualizations.
+## Limitations
+This project is exploratory. Social connections and opinion-update rules are simplified modeling assumptions, and the ANES data do not provide observed social ties or longitudinal opinion changes. Our principal outcome is distance between political opinions, which is different from affective polarization (negative feelings toward political outgroups). The simulation results describe the behavior of these models, not causal effects demonstrated among real voters.
 ## References
 - Kogel, M. J., & Zinnatullin, A. (2026). What drives affective polarization? A systematic literature review. European Political Science. https://doi.org/10.1017/S1682098326100642
 - McMahon, M. J. (2025). The need for cognitive closure and uncertainty-identity theory: Psychological mechanisms for evaluating extremism [Master's thesis, Naval Postgraduate School].
