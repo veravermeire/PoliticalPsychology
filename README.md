@@ -1,4 +1,3 @@
-# PoliticalPsychology
 
 # Political Polarization: Agent-Based Simulation
 
