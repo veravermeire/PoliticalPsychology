@@ -39,11 +39,10 @@ The main finding was an interaction between identity strength and congenial medi
 PoliticalPsychology/
 ├── README.md
 ├── install_packages.R       # installs the required R packages
-├── .here                    # empty file marking the project root
 ├── main/
 │   └── app.R                # interactive Shiny app (main deliverable)
 ├── data/
-│   ├── simulation.R         # core opinion-dynamics model
+│   ├── simulation.r         # core opinion-dynamics model
 │   ├── anes_data.R          # reads and prepares the ANES respondents
 │   └── anes_dataset/        # ANES 2024 Time Series CSV and guidebook
 └── analysis/
