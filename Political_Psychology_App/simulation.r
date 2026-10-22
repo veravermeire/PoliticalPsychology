@@ -285,3 +285,4 @@ run_model_tests <- function() {
 # run_model_tests()
 # result <- simulate_opinions()
 # write.csv(history_data(result), "opinion_history.csv", row.names = FALSE)
+

@@ -286,20 +286,3 @@ run_model_tests <- function() {
 # result <- simulate_opinions()
 # write.csv(history_data(result), "opinion_history.csv", row.names = FALSE)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
