@@ -6,9 +6,12 @@
 # Requires nothing but base R (simulation.R supplies the simulated opinions).
 
 # ---------------------------------------------------------- reading data ----
-# The app reads the raw ANES 2024 Time Series csv that sits in the data/ folder
-# of this repository (any file named data/anes_timeseries*.csv). Only the few
+# The app reads the raw ANES 2024 Time Series csv that sits in the
+# Data/anes_dataset/ folder of this repository (any file named
+# anes_timeseries*.csv). Only the few
 # columns we need are read, so loading takes a couple of seconds.
+
+library(here)
 
 anes_columns <- c(
   "V240001",   # case id
@@ -42,11 +45,11 @@ count_mentions <- function(d, cols) {
   rowSums(m)  # NA if any item is missing
 }
 
-find_anes_file <- function(dir = "data") {
+find_anes_file <- function(dir = here("Data", "anes_dataset")) {
   files <- list.files(dir, pattern = "^anes_timeseries.*\\.csv$", full.names = TRUE)
   if (length(files) == 0) {
-    stop("No ANES file found. Put the ANES 2024 Time Series csv in the data/ ",
-         "folder (see README).", call. = FALSE)
+    stop("No ANES file found. Put the ANES 2024 Time Series csv in the ",
+         "Data/anes_dataset/ folder (see README).", call. = FALSE)
   }
   files[1]
 }

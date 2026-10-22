@@ -2,7 +2,7 @@
 # Adjust the source path if needed.
 library(ggplot2)
 library(patchwork)  # install.packages("patchwork") if needed
-source("simulation.R", local = TRUE)
+source(here("data", "simulation.R"), local = TRUE)
 
 # --- 1. Experimental design and final polarization ---
 
