@@ -1,10 +1,10 @@
 # load relevant libraries and sources
 library(shiny)
 source("simulation.R", local = TRUE)
-source("anes_network.R", local = TRUE)
+source("anes_data.R", local = TRUE)
 
 # Load the ANES respondents (the csv in data/). If the file is missing the
-# app still works in simulation mode and shows a message in ANES mode.
+# app still works in simulation mode and shows a message in the real-data view.
 anes_people <- tryCatch(load_anes_people(), error = function(e) NULL)
 
 # create colour palette for opinions
@@ -142,18 +142,35 @@ sidebarLayout(
   sidebarPanel(
     width = 3,
     h4("Model settings"),
-
-    # Switch between the simulated population and real survey respondents
+    
+    # Switch between the simulated population and the real survey data
     selectInput(
       "data_source",
       "Data source",
       choices = c(
         "Simulated opinions" = "sim",
-        "ANES 2024 respondents (real data)" = "anes"
+        "ANES 2024 survey (real data, static)" = "anes"
       ),
       selected = "sim"
     ),
-    
+
+    # Starting pattern of the simulation (also the pattern real data is compared with)
+    selectInput(
+      "pattern",
+      "Simulated initial opinions",
+      choices = c(
+        "Broad spread" = "broad",
+        "Near the middle" = "middle",
+        "Two groups" = "two_groups"
+      ),
+      selected = "two_groups"
+    ),
+
+    numericInput("seed", "Random seed", value = 123, min = 0, step = 1),
+
+    # Everything below only matters for the simulation
+    conditionalPanel(
+      condition = "input.data_source == 'sim'",
     # Slider for n People
     sliderInput(
       "n",
@@ -163,20 +180,6 @@ sidebarLayout(
       value = 100,
       step = 10
     ),
-    
-    # Drop-down menu for opinion spread, with default=two_groups (simulation only)
-    conditionalPanel(
-      condition = "input.data_source == 'sim'",
-    selectInput(
-      "pattern",
-      "Initial opinions",
-      choices = c(
-        "Broad spread" = "broad",
-        "Near the middle" = "middle",
-        "Two groups" = "two_groups"
-      ),
-      selected = "two_groups"
-    )),
     
     # Slider for average connections
     sliderInput(
@@ -198,9 +201,7 @@ sidebarLayout(
       step = 0.25
     ),
     
-    # Slider for openness threshold (simulation only)
-    conditionalPanel(
-      condition = "input.data_source == 'sim'",
+    # Slider for openness threshold
     sliderInput(
       "openness",
       "Openness threshold",
@@ -208,7 +209,7 @@ sidebarLayout(
       max = 2,
       value = 0.4,
       step = 0.05
-    )),
+    ),
     
     # Slider for adjustment per step
     sliderInput(
@@ -220,23 +221,6 @@ sidebarLayout(
       step = 0.05
     ),
     
-    # Real-data controls
-    conditionalPanel(
-      condition = "input.data_source == 'anes'",
-      sliderInput(
-        "media_effect",
-        "Extra similarity preference from congenial media",
-        min = 0, max = 5, value = 1, step = 0.25
-      ),
-      sliderInput(
-        "openness_range",
-        "Openness: strong party identity (low end) to weak (high end)",
-        min = 0, max = 1, value = c(0.2, 0.6), step = 0.05
-      )
-    ),
-
-    numericInput("seed", "Random seed", value = 123, min = 0, step = 1),
-
     # Option for moving or fixed nodes in Network display
     actionButton("reset", "Reset / apply", class = "btn-primary"),
     tags$hr(),
@@ -247,15 +231,18 @@ sidebarLayout(
       selected = "moving",
       inline = TRUE
     ),
-    tags$hr(),
-    downloadButton("download_history", "Download opinion history (CSV)", class = "btn-sm")
+      tags$hr(),
+      downloadButton("download_history", "Download opinion history (CSV)", class = "btn-sm")
+    )
   ),
   
   # Main panel (tab)
   mainPanel(
     width = 9,
-    verbatimTextOutput("status"),
-     
+    conditionalPanel(
+      condition = "input.data_source == 'sim'",
+      verbatimTextOutput("status"),
+
     # Create three selectable tabs
     tabsetPanel(
       
@@ -371,13 +358,38 @@ sidebarLayout(
         ),
         p(
           "Stepping back pauses playback, restores the previous opinions, and removes subsequent history. Stepping forward recomputes the next step with the same network and settings."
-        ),
-        h4("Real-data mode (ANES 2024)"),
-        p("Each person is a respondent from the 2024 American National Election Studies Time Series. Starting opinion is the liberal-conservative self-placement rescaled to -1..+1."),
-        p("Openness depends on how important the respondent says their party identity is: the more important, the lower the openness threshold (the range is set by the openness slider)."),
-        p("Ties are constructed, not observed: ANES has no information on who knows whom. The probability of a tie decreases with opinion distance, and the preference for similar opinions is stronger between two people who watch more TV news from their own side (Fox shows for Republicans and leaners, MSNBC shows for Democrats and leaners)."),
-        p("Pure independents are not included because they have no co-partisan media. Source: American National Election Studies, ANES 2024 Time Series Study (electionstudies.org).")
+        )
       )
+    )
+    ),
+    conditionalPanel(
+      condition = "input.data_source == 'anes'",
+      h4("Where people fall on the opinion continuum"),
+      p("Each dot is one person, placed by opinion (left = liberal, right = conservative) and coloured as in the simulation, but with no connections. The top panel shows the survey respondents; the bottom panel shows the simulated starting population chosen in the sidebar, with the same number of people. Dashed lines mark each group's average opinion."),
+      plotOutput("cmp_continuum", height = "480px"),
+      tags$small("Survey answers are on a 7-point scale, so respondents really sit at only 7 positions. To show them as a continuum like the simulation, each dot is spread randomly by up to one scale step either side of its true answer (and randomly up or down); this spread is for display only and carries no meaning, so do not read exact values off the plot. The dashed averages use the true answers. Real groups are party sides (leaners included); simulated groups are the people who start below vs. above 0."),
+      tags$hr(),
+      h4("Real-world check: how far apart are the two political groups?"),
+      p("In the simulation, polarization is the distance between the average opinions of two groups. This page measures the same thing in the 2024 American National Election Studies (ANES) survey, taking the two groups to be Democrats/leaners and Republicans/leaners (opinion = liberal-conservative self-placement, -1 to +1). It then splits respondents into low and high levels of the three factors in the model: party identity strength, perceived polarization (how far apart the respondent places the two parties) and congenial media exposure."),
+      fluidRow(
+        column(7, plotOutput("cmp_distance", height = "400px")),
+        column(5,
+               h5("Reference points"),
+               tableOutput("cmp_reference"),
+               tags$small("Real and simulated groups are defined differently (party side vs. the sign of the starting opinion), so treat the comparison as rough. Run the simulation, then come back to see its current state in the last row."))
+      ),
+      h5("Who is in each low/high group"),
+      tableOutput("cmp_factor_table"),
+      tags$small("Bars and brackets are 95% confidence intervals. These are snapshots of different people, not changes over time, so they show associations only, not that a factor causes polarization. Respondents between the low and high cut-offs are left out of those comparisons. Pure independents are excluded because they have no news sources from 'their side'."),
+      h5("Distributions of the survey measures"),
+      fluidRow(
+        column(4, plotOutput("cmp_identity", height = "300px")),
+        column(4, plotOutput("cmp_media", height = "300px")),
+        column(4, plotOutput("cmp_percpol", height = "300px"))
+      ),
+      h5("How the survey measures relate (correlations)"),
+      tableOutput("cmp_cor"),
+      tags$small("Congenial media is the number of regularly watched TV shows from the respondent's own side (Fox shows for Republicans and leaners, MSNBC shows for Democrats and leaners), capped at 3. Source: American National Election Studies, ANES 2024 Time Series Study (electionstudies.org).")
     )
   )
 )
@@ -448,7 +460,7 @@ server <- function(input, output, session) {
       plot_height <- 480
     
     left <- min(hover$coords_css$x + 14, max(8, plot_width - 230))
-    top <- min(hover$coords_css$y + 14, max(8, plot_height - (if (is.null(s$people)) 130 else 230)))
+    top <- min(hover$coords_css$y + 14, max(8, plot_height - 130))
     
     # Create tooltip container
     div(
@@ -495,27 +507,7 @@ server <- function(input, output, session) {
       tags$br(),
       
       # Fill Tooltip: n connections
-      paste("Connections:", selected$connections),
-      
-      # Real-data mode: survey attributes of this respondent
-      if (!is.null(s$people)) {
-        pp <- s$people[selected$participant_id, ]
-        tagList(
-          tags$br(),
-          paste("Party side:", if (is.na(pp$side)) "independent" else
-            if (pp$side == "D") "Democrat/leaner" else "Republican/leaner"),
-          tags$br(),
-          paste("Party identity importance:", sprintf("%.2f", pp$identity)),
-          tags$br(),
-          paste("Congenial media (0-1):", sprintf("%.2f", pp$media)),
-          tags$br(),
-          paste("Openness:", sprintf("%.2f", s$settings$openness[selected$participant_id])),
-          tags$br(),
-          paste("Perceived party distance:",
-                if (is.na(pp$perceived_polarization)) "n/a" else
-                  sprintf("%.0f of 6", pp$perceived_polarization))
-        )
-      }
+      paste("Connections:", selected$connections)
     )
   })
   
@@ -538,57 +530,27 @@ server <- function(input, output, session) {
   
   # Recalculate settings after changed referenced inputs
   requested_settings <- reactive({
-    req(input$n, input$data_source, !is.na(input$seed))
+    req(input$n, input$pattern, !is.na(input$seed))
     
-    # Settings shared by both modes
-    base <- list(
+    # Collects input information
+    list(
       n = input$n,
+      pattern = input$pattern,
       average_degree = min(input$average_degree, input$n - 1),
       homophily = input$homophily,
+      openness = input$openness,
       adjustment = input$adjustment,
       max_steps = 200,
       seed = input$seed
     )
-    
-    if (identical(input$data_source, "anes")) {
-      c(base, list(
-        media_effect = input$media_effect,
-        open_min = input$openness_range[1],
-        open_max = input$openness_range[2]
-      ))
-    } else {
-      req(input$pattern)
-      c(base, list(pattern = input$pattern, openness = input$openness))
-    }
   })
-  
-  # Sensible starting values when switching data source
-  observeEvent(input$data_source, {
-    if (identical(input$data_source, "anes")) {
-      updateSliderInput(session, "average_degree", value = 4)
-      updateSliderInput(session, "homophily", value = 1)
-    } else {
-      updateSliderInput(session, "average_degree", value = 10)
-      updateSliderInput(session, "homophily", value = 0)
-    }
-  }, ignoreInit = TRUE)
   
   # Handle "Reset / apply" and startup runs
   observeEvent(input$reset, {
     running(FALSE)
     tryCatch({
-      settings <- requested_settings()
-      if (identical(input$data_source, "anes")) {
-        if (is.null(anes_people)) {
-          stop("ANES data file not found in the data/ folder. See the README.")
-        }
-        new_state <- do.call(initialize_anes_model,
-                             c(list(people = anes_people), settings))
-      } else {
-        new_state <- do.call(initialize_model, settings)
-      }
-      # remember which inputs produced this state (used for the status line)
-      new_state$applied_inputs <- c(list(source = input$data_source), settings)
+      new_state <- do.call(initialize_model, requested_settings())
+      new_state$applied_inputs <- requested_settings()  # for the status line
       state(new_state)
     }, error = function(e) {
       showNotification(conditionMessage(e),
@@ -597,37 +559,11 @@ server <- function(input, output, session) {
     })
   }, ignoreNULL = FALSE)
   
-  # Status line: current mode, progress, and a hint if settings have changed
-  output$status <- renderText({
-    s <- state()
-    req(s)
-    mode <- if (identical(s$settings$source, "anes")) {
-      "ANES 2024 respondents"
-    } else {
-      "Simulated opinions"
-    }
-    current <- c(list(source = input$data_source), requested_settings())
-    changed <- !identical(s$applied_inputs, current)
-    paste0(
-      mode, " | ", length(s$opinions), " people | step ", s$step, " of ",
-      s$settings$max_steps,
-      if (changed) "\nSettings changed - click Reset / apply to use them." else ""
-    )
-  })
-  
-  # Download the opinion history of the current run
-  output$download_history <- downloadHandler(
-    filename = function() paste0("opinion_history_step", state()$step, ".csv"),
-    content = function(file) {
-      write.csv(history_data(state()), file, row.names = FALSE)
-    }
-  )
-  
   # Respond to the next-step button.
   observeEvent(input$step_once, {
     req(state())
     running(FALSE)
-    state(step_model_any(state()))
+    state(step_model(state()))
   })
   
   # Respond to the step-back button
@@ -733,7 +669,7 @@ server <- function(input, output, session) {
         running(FALSE)
       } else {
         if (s$step < s$settings$max_steps) {
-          s <- step_model_any(s)
+          s <- step_model(s)
           state(s)
         }
         
@@ -779,7 +715,7 @@ server <- function(input, output, session) {
     eligible <- s$adjacency &
       (abs(outer(s$opinions, s$opinions, "-")) <= s$settings$openness)
     
-    metrics_df <- data.frame(
+    data.frame(
       Metric = c(
         "Mean opinion",
         "Opinion standard deviation",
@@ -795,13 +731,6 @@ server <- function(input, output, session) {
         as.character(sum(rowSums(eligible) == 0))
       )
     )
-    if (!is.null(s$people)) {
-      metrics_df <- rbind(metrics_df, data.frame(
-        Metric = "Survey: mean perceived party distance (0-6)",
-        Value = sprintf("%.2f", mean(s$people$perceived_polarization, na.rm = TRUE))
-      ))
-    }
-    metrics_df
   }, striped = TRUE, rownames = FALSE, width = "100%")
   
   output$histogram <- renderPlot({
@@ -994,6 +923,216 @@ server <- function(input, output, session) {
     )
   })
   
+
+  # Status line: progress, and a hint if settings changed since the last apply
+  output$status <- renderText({
+    s <- state()
+    req(s)
+    changed <- !identical(s$applied_inputs, requested_settings())
+    paste0(
+      length(s$opinions), " people | step ", s$step, " of ", s$settings$max_steps,
+      if (changed) "\nSettings changed - click Reset / apply to use them." else ""
+    )
+  })
+  
+  # Download the opinion history of the current run
+  output$download_history <- downloadHandler(
+    filename = function() paste0("opinion_history_step", state()$step, ".csv"),
+    content = function(file) {
+      write.csv(history_data(state()), file, row.names = FALSE)
+    }
+  )
+  
+  #### Real data (static comparison) ####
+  
+  # Simulated starting opinions, same number of people as the survey sample
+  sim_start <- reactive({
+    req(input$pattern, !is.na(input$seed), !is.null(anes_people))
+    with_local_seed(input$seed, initial_opinions(nrow(anes_people), input$pattern))
+  })
+  
+  # Group distance overall and at low/high levels of each factor (computed once)
+  factor_dist <- reactive({
+    req(!is.null(anes_people))
+    factor_distances(anes_people)
+  })
+  
+  # Message shown instead of a plot when the data file is missing
+  need_data <- function() {
+    validate(need(!is.null(anes_people),
+                  "ANES data file not found in the data/ folder. See the README."))
+  }
+  
+  compare_cols <- c("#3D405B", "#F2CC8F")      # high, low level (change colours here)
+  anes_cols <- c(D = "#2166AC", R = "#B2182B")  # Democrat/leaner, Republican/leaner
+  pattern_names <- c(broad = "broad spread", middle = "near the middle",
+                     two_groups = "two groups")
+  by_side <- function(x, levels) {
+    tab <- table(factor(x, levels = levels), factor(anes_people$side, levels = c("D", "R")))
+    t(100 * prop.table(tab, 2))                 # rows = side, columns = category
+  }
+  side_legend <- function(pos) {
+    legend(pos, legend = c("Democrats & leaners", "Republicans & leaners"),
+           fill = anes_cols, bty = "n", cex = 0.85)
+  }
+  ci_text <- function(est, lo, hi) sprintf("%.2f [%.2f, %.2f]", est, lo, hi)
+  
+  output$cmp_continuum <- renderPlot({
+    need_data()
+    real <- anes_people$opinion
+    sim <- sim_start()
+    seed <- if (is.na(input$seed)) 1 else input$seed
+    
+    # Random spread for display only (reproducible with the seed). Each survey
+    # answer is spread by up to a full scale step (1/3) either way, with more
+    # dots near the true answer, so neighbouring answers blend into a continuum.
+    # Dots that would leave the -1..+1 axis are reflected back inside.
+    pos <- with_local_seed(seed + 1, {
+      step <- 1 / 3
+      x <- real + runif(length(real), -step / 2, step / 2) +
+        runif(length(real), -step / 2, step / 2)
+      x <- ifelse(x > 1, 2 - x, ifelse(x < -1, -2 - x, x))
+      list(real_x = x,
+           real_y = runif(length(real), -1, 1),
+           sim_y = runif(length(sim), -1, 1))
+    })
+    
+    mean_or_na <- function(x) if (length(x)) mean(x) else NA_real_
+    real_means <- c(mean_or_na(real[anes_people$side %in% "D"]),
+                    mean_or_na(real[anes_people$side %in% "R"]))
+    sim_means <- c(mean_or_na(sim[sim < 0]), mean_or_na(sim[sim > 0]))
+    
+    draw_panel <- function(x, y, col_value, title, means, labels, label_cols) {
+      par(mar = c(3.4, 0.5, 2.4, 0.5), xaxs = "i", yaxs = "i")
+      plot(NA, xlim = c(-1.1, 1.1), ylim = c(-1.2, 1.45), axes = FALSE,
+           xlab = "", ylab = "", main = title)
+      abline(v = means, lty = 2, col = "grey40")
+      points(x, y, pch = 21, cex = 0.75, lwd = 0.4,
+             col = grDevices::adjustcolor("gray30", alpha.f = 0.35),
+             bg = grDevices::adjustcolor(opinion_colors(col_value), alpha.f = 0.7))
+      if (!is.na(means[1])) {
+        text(means[1], 1.35, labels[1], pos = 2, cex = 0.85, col = label_cols[1])
+      }
+      if (!is.na(means[2])) {
+        text(means[2], 1.35, labels[2], pos = 4, cex = 0.85, col = label_cols[2])
+      }
+      axis(1, at = c(-1, 0, 1), labels = c("\u22121", "0", "+1"))
+      mtext("\u2190 more liberal        more conservative \u2192", side = 1,
+            line = 2.1, cex = 0.8)
+    }
+    
+    par(mfrow = c(2, 1))
+    draw_panel(pos$real_x, pos$real_y, real,
+               sprintf("ANES 2024 respondents (%s people)", format(length(real), big.mark = ",")),
+               real_means, c("Democratic side average", "Republican side average"),
+               c(anes_cols[["D"]], anes_cols[["R"]]))
+    draw_panel(sim, pos$sim_y, sim,
+               sprintf("Simulated start: %s (%s people)", pattern_names[[input$pattern]],
+                       format(length(sim), big.mark = ",")),
+               sim_means, c("Group below 0: average", "Group above 0: average"),
+               c("grey30", "grey30"))
+  })
+  
+  output$cmp_distance <- renderPlot({
+    need_data()
+    fd <- factor_dist()
+    overall <- fd[fd$Factor == "All respondents", ]
+    f <- fd[fd$Factor != "All respondents", ]
+    factors <- unique(f$Factor)
+    par(mar = c(4.5, 5, 3.5, 1))
+    plot(NA, xlim = c(0.5, 3.5), ylim = c(0, max(f$Upper, overall$Distance) * 1.1),
+         xaxt = "n", xlab = "", las = 1,
+         ylab = "Distance between group means\n(Republican side minus Democratic side)",
+         main = "Real-world group distance at low vs. high\nlevels of each factor")
+    axis(1, at = 1:3, labels = factors)
+    abline(h = overall$Distance, lty = 2, col = "grey40")
+    text(0.5, overall$Distance, "all respondents", adj = c(0, -0.6), cex = 0.8, col = "grey30")
+    for (i in seq_along(factors)) {
+      for (lv in c("Low", "High")) {
+        r <- f[f$Factor == factors[i] & f$Level == lv, ]
+        x <- i + if (lv == "Low") -0.15 else 0.15
+        arrows(x, r$Lower, x, r$Upper, angle = 90, code = 3, length = 0.05, lwd = 2)
+        points(x, r$Distance, pch = 21, cex = 2,
+               bg = if (lv == "Low") compare_cols[2] else compare_cols[1])
+      }
+    }
+    legend("bottomright", legend = c("Low", "High"), pch = 21, pt.cex = 1.6,
+           pt.bg = c(compare_cols[2], compare_cols[1]), bty = "n")
+  })
+  
+  output$cmp_reference <- renderTable({
+    need_data()
+    fd <- factor_dist()
+    o <- fd[fd$Factor == "All respondents", ]
+    start <- sim_start()
+    rows <- data.frame(
+      Source = c("Real survey (all respondents)",
+                 sprintf("Simulated start: %s, %s people", pattern_names[[input$pattern]],
+                         format(length(start), big.mark = ","))),
+      Distance = c(ci_text(o$Distance, o$Lower, o$Upper),
+                   sprintf("%.2f", sim_group_distance(start, start))),
+      Groups = c("party side", "sign of starting opinion")
+    )
+    s <- state()
+    if (!is.null(s)) {
+      rows <- rbind(rows, data.frame(
+        Source = sprintf("Simulation tab: step %d, %s start, %d people", s$step,
+                         pattern_names[[s$settings$pattern]], length(s$opinions)),
+        Distance = sprintf("%.2f", sim_group_distance(s$history[1, ], s$opinions)),
+        Groups = "sign of starting opinion"
+      ))
+    }
+    rows
+  }, striped = TRUE, spacing = "s", width = "100%")
+  
+  output$cmp_factor_table <- renderTable({
+    need_data()
+    fd <- factor_dist()
+    data.frame(
+      Factor = fd$Factor, Level = fd$Level, Definition = fd$Definition,
+      People = format(fd$People, big.mark = ","),
+      `Group distance [95% CI]` = ci_text(fd$Distance, fd$Lower, fd$Upper),
+      check.names = FALSE
+    )
+  }, striped = TRUE, spacing = "s", width = "100%")
+  
+  output$cmp_identity <- renderPlot({
+    need_data()
+    props <- by_side(round(anes_people$identity * 4), 0:4)
+    par(mar = c(6, 4.5, 3, 1))
+    barplot(props, beside = TRUE, col = anes_cols, las = 2, cex.names = 0.8,
+            names.arg = c("Not at all", "A little", "Moderately", "Very", "Extremely"),
+            ylab = "% within party side", main = "Party identity importance")
+    side_legend("topleft")
+  })
+  
+  output$cmp_media <- renderPlot({
+    need_data()
+    props <- by_side(round(anes_people$media * 3), 0:3)
+    par(mar = c(6, 4.5, 3, 1))
+    barplot(props, beside = TRUE, col = anes_cols, las = 1,
+            names.arg = c("0", "1", "2", "3 or more"),
+            xlab = "TV shows from own side", ylab = "% within party side",
+            main = "Congenial TV news")
+    side_legend("topright")
+  })
+  
+  output$cmp_percpol <- renderPlot({
+    need_data()
+    pp <- anes_people$perceived_polarization
+    pp <- pp[!is.na(pp)]
+    grp <- factor(ifelse(pp < 0, "<0", as.character(pp)), levels = c("<0", 0:6))
+    par(mar = c(6, 4.5, 3, 1))
+    barplot(100 * prop.table(table(grp)), col = "#7570B3", las = 1,
+            xlab = "Republican minus Democratic Party placement\n(<0: placed the other way round)",
+            ylab = "% of people", main = "Perceived party distance")
+  })
+  
+  output$cmp_cor <- renderTable({
+    need_data()
+    survey_correlations(anes_people)
+  }, striped = TRUE, spacing = "s", width = "100%")
+
 }
 
 shinyApp(ui, server)
