@@ -1,8 +1,8 @@
 # Political Psychology: simulation analysis
 # Adjust the source path if needed.
-source("GitHub/PIPS/PoliticalPsychology/PP_app/simulation.R")
 library(ggplot2)
 library(patchwork)  # install.packages("patchwork") if needed
+source("simulation.R", local = TRUE)
 
 # --- 1. Experimental design and final polarization ---
 
