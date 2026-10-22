@@ -275,3 +275,4 @@ print(aggregate(
   change_polarization ~ identity_strength + perceived_polarization + congenial_media,
   data = degree20_results, FUN = mean
 ))
+
