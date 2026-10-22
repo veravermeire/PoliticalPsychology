@@ -1,12 +1,11 @@
-# load relevant libraries and sources
+# load relevant libraries and sources (paths are built from the project root)
 library(shiny)
+library(here)
 
-sim_file <- list.files(pattern = "^simulation\\.[rR]$")
-if (length(sim_file) == 0) stop("simulation.R not found in the app folder.", call. = FALSE)
-source(sim_file[1], local = TRUE)
-source("anes_data.R", local = TRUE)
+source(here("Data", "simulation.R"), local = TRUE)
+source(here("Data", "anes_data.R"), local = TRUE)
 
-# Load the ANES respondents (the csv in data/). If the file is missing the
+# Load the ANES respondents (the csv in Data/anes_dataset/). If the file is missing the
 # app still works in simulation mode and shows a message in the real-data view.
 anes_people <- tryCatch(load_anes_people(), error = function(e) NULL)
 
@@ -683,7 +682,7 @@ server <- function(input, output, session) {
   # Message shown instead of a plot when the data file is missing
   need_data <- function() {
     validate(need(!is.null(anes_people),
-                  "ANES data file not found in the data/ folder. See the README."))
+                  "ANES data file not found in the Data/anes_dataset/ folder. See the README."))
   }
   
   anes_cols     <- c(D = "#2166AC", R = "#B2182B")  # Democrat/leaner, Republican/leaner
