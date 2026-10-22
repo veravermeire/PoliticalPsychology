@@ -239,44 +239,122 @@ history_data <- function(state) {
 network_data <- function(state) state$edges
 
 run_model_tests <- function() {
-  a <- matrix(c(FALSE, TRUE, TRUE, FALSE), 2, 2)
+  # Check social influence with weaker and stronger outgroup resistance.
+  adjacency <- matrix(c(FALSE, TRUE, TRUE, FALSE), 2, 2)
   pure_social <- MODEL
   pure_social$media_share <- 0
-  weak <- update_opinions(c(0, 0.8), a, c(-1, 1), c(0, 0),
-                          c(0, 0), c(0.5, 0.5), pure_social)
+  
+  weak <- update_opinions(
+    c(0, 0.8), adjacency, c(-1, 1), c(0, 0),
+    c(0, 0), c(0.5, 0.5), pure_social
+  )
   stopifnot(isTRUE(all.equal(weak, c(0.16, 0.64))))
-  strong <- update_opinions(c(0, 0.8), a, c(-1, 1), c(1, 1),
-                            c(2, 2), c(0.5, 0.5), pure_social)
+  
+  strong <- update_opinions(
+    c(0, 0.8), adjacency, c(-1, 1), c(1, 1),
+    c(2, 2), c(0.5, 0.5), pure_social
+  )
   stopifnot(strong[1] > 0, strong[1] < weak[1])
+  
+  # Without connections or media influence, opinions stay unchanged.
   isolated <- matrix(FALSE, 2, 2)
-  stopifnot(identical(update_opinions(c(0, 0.8), isolated, c(-1, 1),
-                                      c(0, 0), c(0, 0), c(1, 1), pure_social), c(0, 0.8)))
-  media_only <- update_opinions(c(0, 0), isolated, c(-1, 1),
-                                c(0, 0), c(0, 0), c(1, 1))
+  
+  stopifnot(
+    identical(
+      update_opinions(
+        c(0, 0.8), isolated, c(-1, 1), c(0, 0),
+        c(0, 0), c(1, 1), pure_social
+      ),
+      c(0, 0.8)
+    )
+  )
+  
+  media_only <- update_opinions(
+    c(0, 0), isolated, c(-1, 1), c(0, 0),
+    c(0, 0), c(1, 1)
+  )
   stopifnot(isTRUE(all.equal(media_only, c(-0.03, 0.03))))
-  s <- initialize_model(n = 10, max_steps = 8)
-  stopifnot(identical(back_model(step_model(s)), s),
-            identical(step_model(s), step_model(back_model(step_model(s)))))
-  changed <- initialize_model(n = 10, identity_strength = 1,
-                              perceived_polarization = 2, congenial_media = 0)
-  stopifnot(identical(s$opinions, changed$opinions),
-            identical(s$adjacency, changed$adjacency))
-  stopifnot(identical(simulate_opinions(n = 10, max_steps = 5),
-                      simulate_opinions(n = 10, max_steps = 5)))
-  # Corner cases: no ties, complete graph, and slider endpoints.
-  cases <- expand.grid(pattern = c("broad", "middle", "two_groups"),
-                       degree = c(0, 3, 9), identity = c(0, 1), perceived = c(0, 2), media = c(0, 1),
-                       stringsAsFactors = FALSE)
+  
+  # Ten people can each have at most nine connections.
+  initial_state <- initialize_model(
+    n = 10,
+    average_degree = 3,
+    max_steps = 8
+  )
+  
+  stopifnot(
+    identical(
+      back_model(step_model(initial_state)),
+      initial_state
+    ),
+    identical(
+      step_model(initial_state),
+      step_model(back_model(step_model(initial_state)))
+    )
+  )
+  
+  # Response settings must not change starting opinions or connections.
+  changed <- initialize_model(
+    n = 10,
+    average_degree = 3,
+    identity_strength = 1,
+    perceived_polarization = 2,
+    congenial_media = 0
+  )
+  
+  stopifnot(
+    identical(initial_state$opinions, changed$opinions),
+    identical(initial_state$adjacency, changed$adjacency)
+  )
+  
+  # Identical settings and seeds must reproduce the same run.
+  stopifnot(
+    identical(
+      simulate_opinions(
+        n = 10, average_degree = 3, max_steps = 5, seed = 123
+      ),
+      simulate_opinions(
+        n = 10, average_degree = 3, max_steps = 5, seed = 123
+      )
+    )
+  )
+  
+  # Check no ties, a complete graph, and slider endpoints for every pattern.
+  cases <- expand.grid(
+    pattern = c("broad", "middle", "two_groups"),
+    degree = c(0, 3, 9),
+    identity = c(0, 1),
+    perceived = c(0, 2),
+    media = c(0, 1),
+    stringsAsFactors = FALSE
+  )
+  
   for (i in seq_len(nrow(cases))) {
-    z <- cases[i, ]
-    r <- simulate_opinions(10, z$pattern, z$degree, z$identity,
-                           z$perceived, z$media, max_steps = 10)
-    stopifnot(nrow(r$history) == 11, nrow(r$perception_history) == 11,
-              all(is.finite(r$history)), all(abs(r$history) <= 1),
-              all(is.finite(r$perception_history)),
-              all(r$perception_history >= 0 & r$perception_history <= 2),
-              isSymmetric(r$adjacency), all(diag(r$adjacency) == FALSE))
+    settings <- cases[i, ]
+    
+    result <- simulate_opinions(
+      n = 10,
+      pattern = settings$pattern,
+      average_degree = settings$degree,
+      identity_strength = settings$identity,
+      perceived_polarization = settings$perceived,
+      congenial_media = settings$media,
+      max_steps = 10
+    )
+    
+    stopifnot(
+      nrow(result$history) == 11,
+      nrow(result$perception_history) == 11,
+      all(is.finite(result$history)),
+      all(abs(result$history) <= 1),
+      all(is.finite(result$perception_history)),
+      all(result$perception_history >= 0),
+      all(result$perception_history <= 2),
+      isSymmetric(result$adjacency),
+      all(diag(result$adjacency) == FALSE)
+    )
   }
+  
   message("All model tests passed.")
   invisible(TRUE)
 }
